@@ -1,4 +1,6 @@
-# brand packs — 报告信纸/品牌包
+# brand packs — 报告信纸/品牌包（内置兜底）
+
+> **2026-06-10 起，品牌包的正式家是中央品牌库 `astra-brand`**（仓 `Astralune-ai/astra-brand`，运行时 `~/.astra/brands`，规范 `BRAND_SPEC.md`，跨技能统一接口 + brand.json 清单 + 无信纸客户的模板生成器）。本目录仅作**未装中央库时的兜底**，构建器解析顺序：中央库 → 本目录。
 
 每个子目录 = 一个品牌包，REPORT.md front-matter 用 `brand: <目录名>` 选用（默认 `astralune`）。
 

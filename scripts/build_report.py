@@ -6,7 +6,9 @@
 输入:  <工作区>/REPORT.md，顶部必须有 YAML front-matter:
        title / date / out 必填; kicker / subtitle / classification / report_type /
        brand(默认 astralune) / footnote 可选。title、subtitle 内可用 <br> 断行。
-信纸:  brand pack = <repo>/brand/<brand>/{cover.png, inner-soft.png} 整页背景。
+信纸:  中央品牌库优先 —— $ASTRA_BRAND_DIR(默认 ~/.astra/brands)/<brand>/brand.json
+       （letterhead.cover / .inner / .content_margins_mm，规范见 astra-brand/BRAND_SPEC.md）；
+       库不存在时回退 <repo>/brand/<brand>/{cover.png, inner-soft.png}（默认边距）。
 原则:  真信纸当整页背景、正文流在留白区、不加角标/页眉/logo 占位；
        黑白灰单色（禁蓝禁金）；文字压淡水印正常。
 """
@@ -20,6 +22,23 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def die(msg):
     print(f"✗ build_report: {msg}")
     sys.exit(1)
+
+
+def resolve_brand(brand):
+    """中央品牌库（astra-brand 规范）优先；没装库则回退 repo 内置包。
+    返回 (cover, inner, content_margins_mm[上右下左], 来源标识)。"""
+    import json
+    pack = os.path.join(os.path.expanduser(os.environ.get("ASTRA_BRAND_DIR", "~/.astra/brands")), brand)
+    manifest = os.path.join(pack, "brand.json")
+    if os.path.isfile(manifest):
+        lh = json.load(open(manifest, encoding="utf-8")).get("letterhead", {})
+        return (os.path.join(pack, lh.get("cover", "letterhead/cover.png")),
+                os.path.join(pack, lh.get("inner", "letterhead/inner-soft.png")),
+                lh.get("content_margins_mm", [40, 24, 20, 24]),
+                f"brand-pack {pack}")
+    legacy = os.path.join(REPO, "brand", brand)
+    return (os.path.join(legacy, "cover.png"), os.path.join(legacy, "inner-soft.png"),
+            [40, 24, 20, 24], f"repo-fallback {legacy}")
 
 
 def parse_front_matter(text):
@@ -78,14 +97,12 @@ def main():
     text = open(md_path, encoding="utf-8").read()
     meta, text = parse_front_matter(text)
 
-    # —— 护栏 1：brand pack 存在
+    # —— 护栏 1：brand pack 解析（中央品牌库优先，repo 内置兜底）
     brand = meta.get("brand", "astralune")
-    brand_dir = os.path.join(REPO, "brand", brand)
-    cover_png = os.path.join(brand_dir, "cover.png")
-    inner_png = os.path.join(brand_dir, "inner-soft.png")
+    cover_png, inner_png, margins, brand_src = resolve_brand(brand)
     for p in (cover_png, inner_png):
         if not os.path.isfile(p):
-            die(f"brand pack 缺文件: {p}（brand pack 规范见 {os.path.join(REPO,'brand','README.md')}）")
+            die(f"brand pack 缺文件: {p}（规范见 ~/Code/astra-brand/BRAND_SPEC.md；来源 {brand_src}）")
 
     # SVG 引用换成 Chrome 渲好的 PNG（weasyprint 渲不动含 CSS 变量的 SVG）
     text = re.sub(r'\(assets/([^)\s]+)\.svg\)', r'(assets/\1.png)', text)
@@ -119,7 +136,10 @@ def main():
     body = md.convert(text)
     toc_html = md.toc
 
-    css = CSS_TEMPLATE.replace("@@INNER@@", inner_png).replace("@@COVER@@", cover_png)
+    mt, mr, mb, ml = margins
+    css = (CSS_TEMPLATE.replace("@@INNER@@", inner_png).replace("@@COVER@@", cover_png)
+           .replace("@@MT@@", str(mt)).replace("@@MR@@", str(mr))
+           .replace("@@MB@@", str(mb)).replace("@@ML@@", str(ml)))
 
     rows = [f'<div class="row"><b>编制日期</b><span>{esc(meta["date"])}</span></div>']
     if meta.get("report_type"):
@@ -148,7 +168,7 @@ def main():
         pages = f" | {len(pypdf.PdfReader(out).pages)} 页"
     except Exception:
         pass
-    print(f"✓ PDF => {out} | {os.path.getsize(out)} bytes{pages} | brand={brand}")
+    print(f"✓ PDF => {out} | {os.path.getsize(out)} bytes{pages} | brand={brand}（{brand_src}）")
 
 
 # ============ 样式（黑白灰单色：炭黑 #26282c / 银灰 #9fa1a6 / 近黑 #1a1b1e / 浅灰 #f5f5f6）============
@@ -156,10 +176,10 @@ CSS_TEMPLATE = r"""
 /* 内页：真信纸整页背景，正文流在留白区；背景全幅 A4 定位抵消页边距 */
 @page {
   size: A4;
-  margin: 40mm 24mm 20mm 24mm;
+  margin: @@MT@@mm @@MR@@mm @@MB@@mm @@ML@@mm;   /* 安全边距来自 brand.json content_margins_mm */
   background-image: url('@@INNER@@');
   background-repeat: no-repeat;
-  background-size: 210mm 297mm; background-position: -24mm -40mm;
+  background-size: 210mm 297mm; background-position: -@@ML@@mm -@@MT@@mm;
   @bottom-center{ content: counter(page) " / " counter(pages);
                   font: 8pt 'PingFang SC',sans-serif; color: #8d9095; vertical-align: bottom; padding-bottom: 3mm; }
 }

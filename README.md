@@ -17,7 +17,7 @@ scripts/
   build_report.py       # weasyprint 构建器：meta 读 REPORT.md front-matter，信纸走 brand pack
   setup.sh              # venv + 钉版本依赖 + 外部工具体检
   sync_skill.sh         # 推仓前同步 skill prompt（单向 根→repo）
-brand/                  # 品牌包（cover.png + inner-soft.png 整页背景），front-matter `brand:` 选用
+brand/                  # 内置兜底品牌包；运行时优先读中央品牌库 ~/.astra/brands（astra-brand 仓，跨技能统一）
 requirements.txt
 ```
 
