@@ -1,48 +1,104 @@
+<div align="center">
+
 # astra-research
 
-Astralune 的行业/市场尽调报告流水线（Claude Code skill）——「采集 → 综合 → 验证 → 成稿 → 客户交付 PDF」一条线。skill prompt 编排研究（并行子 agent fan-out + 质量 gate），脚本接管全部确定性步骤（图表渲染 / 七项 lint / weasyprint 套信纸出 PDF）。
+> *"One command in. One branded, source-traceable due-diligence report out."*
 
-## 仓库结构
-```
-skill/                  # 技能 prompt（SKILL.md + references/，由 scripts/sync_skill.sh 从部署机真源同步）
-  SKILL.md              #   流水线编排：Scope gate → 研究计划 gate → Collect → 覆盖度 → Assemble → Verify → Package
-  references/
-    quality-standard.md #   研究计划 gate + 子 agent 源纪律 + 审核 rubric（Tier 分级/三角验证/对抗式 Verify）
-    report-template.md  #   报告站位 + 结构（顾问综述前置 + 0–8 节）+ PDF 管线（唯一真源）
-    source-registry.md  #   插槽式信息源注册表（加爬虫/API/付费库的地方）
-scripts/
-  build.sh              # 一条命令出 PDF：渲图 → lint → 构建
-  render_charts.sh      # assets/*.mmd → SVG → 去 @import → headless Chrome 截 2× PNG
-  verify_report.py      # 七项 lint（篇幅/来源写法/禁句式/图资产/主章配图/gate 工件），不过不出 PDF
-  build_report.py       # weasyprint 构建器：meta 读 REPORT.md front-matter，信纸走 brand pack
-  setup.sh              # venv + 钉版本依赖 + 外部工具体检
-  sync_skill.sh         # 推仓前同步 skill prompt（单向 根→repo）
-brand/                  # 内置兜底品牌包；运行时优先读中央品牌库 ~/.astra/brands（astra-brand 仓，跨技能统一）
-requirements.txt
-```
+![License](https://img.shields.io/badge/License-Source%20Available-blue)
+![Python](https://img.shields.io/badge/Python-3.10%2B-green)
+![Claude Code](https://img.shields.io/badge/Claude%20Code-Skill-blueviolet)
+![Quality Gates](https://img.shields.io/badge/Quality%20Gates-7%20lint%20checks-brightgreen)
 
-## 安装（部署机）
-```bash
-# 1) 放置：本仓库 → ~/.claude/commands/research/_repo/（skill/ 内容提一份到 ~/.claude/commands/research/ 根）
-# 2) 依赖：
-bash scripts/setup.sh        # 建 ~/.venvs/research + weasyprint/markdown/Pillow/pypdf（钉版本）
-# 另需：beautiful-mermaid CLI（~/.local/bin/mermaid 或 MERMAID_BIN）、Chrome、中文字体（macOS 自带）
-```
+**[English](README.md) · [中文](README_CN.md)**
 
-## 出报告
-```bash
-bash scripts/build.sh <工作区>          # 工作区 = 00_scope.md + 01_sources/ + REPORT.md + assets/
-```
-REPORT.md 顶部写 YAML front-matter（`title/date/out` 必填，`kicker/subtitle/classification/report_type/brand/footnote` 可选）。lint 不过不出 PDF；quick primer 档可 `--min-chars` 调低篇幅线。
+<br>
 
-## 设计原则
-- **标准强制质量，不靠临场自觉**：研究计划 gate + 子 agent 源纪律模板 + lint 闸门，三层都可被脚本检查。
-- **单一真源**：报告结构/配色/管线只写在 report-template.md；构建器只有一份，meta 参数化，禁止 cp 改副本。
-- **确定性步骤交给脚本**：模型只做研究与判断，渲染/校验/构建零 token。
-- **黑白灰单色排版（禁蓝禁金）**；真信纸整页背景，正文流在留白区，不加角标/页眉占位。
+**Still spending a week turning scattered web findings into a market report?**
 
-## 已吸收的坑（排障备查）
-Mermaid SVG 含 CSS 变量 → librsvg/weasyprint 渲成黑块，必须 Chrome 截 PNG；weasyprint `@page` 背景默认画在边距内 → `background-size:210mm 297mm` + 负偏移全幅定位；CommonMark 列表前要空行、连续 `> **字段**` 并段 → `_fix_lists`/`_fix_bq` 构建时自动修。
+**Still hand-fixing margins, fonts and letterheads at 2 a.m. before a client deadline?**
+
+**Still unable to say which source each number in your report came from?**
+
+<br>
+
+### An industry / market due-diligence pipeline: parallel research agents → quality-gated report → letterhead-branded PDF.
+
+[**Why**](#why-this-exists) · [**What You Get**](#what-you-get) · [**Quick Start**](#quick-start) · [**Pipeline**](#how-it-works) · [**Layout**](#repo-layout)
+
+</div>
+
+<br>
 
 ---
-© Astralune (X.H. Noctuer Holdings Pty Ltd) · 内部/客户部署用，未授权请勿分发。
+
+## Why this exists
+
+Previously, producing one credible DD report meant days of juggling search tabs, pasting findings into a doc, chasing missing citations, redrawing charts that wouldn't render, then fighting a word processor for a presentable deliverable — and the quality depended on whoever did it that day.
+
+With astra-research, you state the target and the angle. The pipeline fans out parallel research agents under source-tier discipline, assembles a neutral-stance report against a fixed structure, runs **seven mechanical quality gates** (a failing report never becomes a PDF), and renders a letterhead-branded deliverable — the same standard, every run. Its first production run shipped a real **37-page client-grade PDF** with **131 official-source URLs and zero unsourced key claims**.
+
+## What you get
+
+| Capability | Detail |
+|---|---|
+| 🧭 Advisor brief up front | A "to the client" overview before the TOC: what this project really is, opportunities, risks, and three implementation perspectives — without pushing a decision |
+| 🏗️ Fixed report skeleton | Market & verdict → segmentation 2×2 → named value chain → business logic → claims vs. reality → two-sided takeaways + appendices |
+| 🔬 Source discipline | Tier-1/2/3 source grading, triangulation, confidence labels; gaps are declared, never papered over |
+| 🚦 7 lint gates | Length ≥ threshold, official-URL-only citations, banned-rhetoric scan, chart assets present, per-chapter figures, scope & source-tier artifacts |
+| 🎨 Brand packs | Letterhead, palette and safe margins resolved from the central [astra-brand](https://github.com/Astralune-ai/astra-brand) library — one front-matter line per client |
+| 📄 Deterministic PDF | Mermaid charts rasterized via headless Chrome, full-bleed letterhead positioning, CJK typography, real TOC page numbers |
+
+## Quick start
+
+```bash
+bash scripts/setup.sh                 # one-time: pinned venv + toolchain checks
+bash scripts/build.sh <workspace>     # render charts → 7 lint gates → branded PDF
+```
+
+A workspace is `00_scope.md + 01_sources/ + REPORT.md + assets/`. Report metadata lives in `REPORT.md` YAML front-matter:
+
+```yaml
+---
+title: Acme 2026<br>Market Due Diligence
+date: 2026-06-10
+out: Acme_DD_Report_2026-06-10.pdf
+brand: astralune          # any pack in ~/.astra/brands
+classification: CONFIDENTIAL
+---
+```
+
+## How it works
+
+`Scope gate → Research-plan gate → parallel Collect (sub-agents) → coverage check → Assemble → (adversarial Verify) → Package`
+
+The `skill/` prompts orchestrate research and judgment; the `scripts/` toolchain owns every deterministic step — rendering, linting, building — so no tokens are spent on work a script can do.
+
+## Repo layout
+
+```
+skill/                  # Claude Code skill prompts (pipeline, quality standard, report template, source registry)
+scripts/
+  build.sh              # one-command entry: charts → lint → PDF
+  render_charts.sh      # .mmd → SVG → headless-Chrome 2× PNG (idempotent)
+  verify_report.py      # the 7 lint gates — a failing report never ships
+  build_report.py       # weasyprint builder; metadata from front-matter, brand from pack
+  setup.sh / sync_skill.sh
+brand/                  # built-in fallback packs (central astra-brand library takes precedence)
+requirements.txt        # pinned: weasyprint / markdown / Pillow / pypdf
+```
+
+## Requirements
+
+macOS with Chrome, [beautiful-mermaid](https://github.com/Astralune-ai) CLI, CJK fonts (PingFang/Songti, system-bundled). Python deps are pinned and isolated in `~/.venvs/research` by `setup.sh`.
+
+---
+
+<div align="center">
+
+**State the target. Get the report. Trace every number.**
+
+![astra-research](https://img.shields.io/badge/astra--research-due%20diligence%2C%20industrialized-black?style=for-the-badge)
+
+Powered by [**Astralune**](https://github.com/Astralune-ai) · Astra Source Available License v1.0
+
+</div>
