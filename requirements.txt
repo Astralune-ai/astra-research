@@ -1,0 +1,4 @@
+weasyprint==68.1
+markdown==3.10.2
+Pillow>=10,<13
+pypdf>=4,<7
