@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | WebSearch / WebFetch | T1–T3 混 | 开放 web、新闻、官网、政府/监管、学术、公司 IR、市场报告**摘要层** | 内置 | ✅ |
 | 政府/监管/官方规格/公司 IR/学术 | **T1** | 权威一手（filings、官方 spec、监管站、论文） | WebFetch 直取官方页 | ✅ |
-| astra-probe（TikHub 15 平台） | T2 | 社媒/内容赛道、达人、舆情、**需求侧信号**、跨境选品 | `~/.claude/commands/astra-probe/astra_probe.sh --platform X <action>` | ✅ |
+| astra-probe（双引擎） | T1–T2 | **社媒**(TikHub 16平台:达人/舆情/选品/评论) + **通用 web/22垂类**(AnySearch:code/academic/finance/legal/security…) | social: `astra_probe.sh --platform X <action>` / web: `astra_probe.sh web search "<q>" --domain <d>` | ✅ |
 | bg-check（maigret 3158 站 + LinkedIn + Google） | T1–T2 | 人物/公司**身份**、履历、跨平台找人 | `/bg-check` | ✅ |
 | OFAC SDN / BIS Entity List / EU 制裁名单 | **T1** | **制裁/出口管制名单筛查** | WebFetch 官方名单页 / 公开搜索 API | ✅ |
 | 本地附件 / Drive / Lark | — | 委托方给的私有数据、附件 | Read / google-workspace / lark-* | ✅ |
